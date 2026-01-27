@@ -179,7 +179,10 @@ export async function POST(request: Request) {
 
     if (referenceTexts.length && input.useReferenceStyle !== false) {
       const prompt = buildStyleProfilePrompt(referenceTexts);
-      const result = await createJsonCompletion(prompt);
+      const result = await createJsonCompletion({
+        ...prompt,
+        model: "o4-mini",
+      });
       styleProfile = result as Record<string, unknown>;
     }
 
@@ -187,7 +190,10 @@ export async function POST(request: Request) {
       ...input,
       styleProfile,
     });
-    const draft = await createJsonCompletion(draftPrompt);
+    const draft = await createJsonCompletion({
+      ...draftPrompt,
+      model: "gpt-5-mini",
+    });
 
     const rewritePrompt = buildRewritePrompt({
       draft,
@@ -195,12 +201,18 @@ export async function POST(request: Request) {
       mustInclude: input.mustInclude,
       bannedWords: input.bannedWords,
     });
-    const finalOutput = await createJsonCompletion(rewritePrompt);
+    const finalOutput = await createJsonCompletion({
+      ...rewritePrompt,
+      model: "gpt-5-mini",
+    });
 
     const output = finalOutput as Record<string, unknown>;
-    const titleCandidate = Array.isArray((output as any)?.titleCandidates)
-      ? (output as any).titleCandidates[0] ?? null
-      : null;
+    const titleCandidate = (() => {
+      const titles = output["titleCandidates"];
+      if (!Array.isArray(titles) || titles.length === 0) return null;
+      const first = titles[0];
+      return typeof first === "string" ? first : null;
+    })();
 
     await adminDb.collection("generations").doc(generationId).set({
       uid,
