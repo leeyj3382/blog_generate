@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireAuth } from "@/lib/auth";
 
 function parseCursor(cursor: string) {
@@ -19,6 +19,7 @@ export async function GET(request: Request) {
   const limit = Math.min(Number(searchParams.get("limit") ?? 20), 50);
   const cursor = searchParams.get("cursor");
 
+  const adminDb = getAdminDb();
   let query = adminDb
     .collection("users")
     .doc(auth.decoded.uid)

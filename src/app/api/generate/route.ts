@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireAuth } from "@/lib/auth";
 import { generateSchema } from "@/lib/validators/generate";
 import { rateLimit } from "@/lib/rateLimit";
@@ -120,6 +120,7 @@ export async function POST(request: Request) {
 
   const uid = auth.decoded.uid;
   const email = auth.decoded.email ?? null;
+  const adminDb = getAdminDb();
   const userRef = adminDb.collection("users").doc(uid);
   const createdAt = nowMs();
 

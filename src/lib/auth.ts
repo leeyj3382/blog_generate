@@ -1,4 +1,4 @@
-import { adminAuth } from "@/lib/firebaseAdmin";
+import { getAdminAuth } from "@/lib/firebaseAdmin";
 
 export function getBearerToken(request: Request): string | null {
   const authHeader = request.headers.get("authorization");
@@ -13,7 +13,7 @@ export async function requireAuth(request: Request) {
     return { ok: false as const, error: "Missing token" };
   }
   try {
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await getAdminAuth().verifyIdToken(token);
     return { ok: true as const, decoded };
   } catch {
     return { ok: false as const, error: "Invalid token" };

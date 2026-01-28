@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireAuth } from "@/lib/auth";
 
 export async function GET(
@@ -12,6 +12,7 @@ export async function GET(
   }
 
   const { id } = await params;
+  const adminDb = getAdminDb();
   const docRef = adminDb.collection("generations").doc(id);
   const snap = await docRef.get();
   if (!snap.exists) {
@@ -36,6 +37,7 @@ export async function DELETE(
   }
 
   const { id } = await params;
+  const adminDb = getAdminDb();
   const docRef = adminDb.collection("generations").doc(id);
   const snap = await docRef.get();
   if (!snap.exists) {

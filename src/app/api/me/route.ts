@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireAuth } from "@/lib/auth";
 
 function nowMs() {
@@ -14,6 +14,7 @@ export async function GET(request: Request) {
 
   const uid = auth.decoded.uid;
   const email = auth.decoded.email ?? null;
+  const adminDb = getAdminDb();
   const userRef = adminDb.collection("users").doc(uid);
   const snap = await userRef.get();
   const timestamp = nowMs();
