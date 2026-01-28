@@ -31,6 +31,10 @@ export default function GeneratePage() {
 
     try {
       const token = await getIdToken();
+      if (!token) {
+        router.push("/login");
+        return;
+      }
       const payload = {
         platform,
         purpose,
@@ -68,7 +72,10 @@ export default function GeneratePage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "생성 실패");
+        const detail = data?.stage
+          ? `${data.error ?? "생성 실패"} (stage: ${data.stage})`
+          : data.error ?? "생성 실패";
+        throw new Error(detail);
       }
 
       const data = await res.json();

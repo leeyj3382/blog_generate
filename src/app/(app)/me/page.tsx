@@ -30,6 +30,10 @@ export default function MePage() {
     const load = async () => {
       try {
         const token = await getIdToken();
+        if (!token) {
+          setError("로그인이 필요합니다.");
+          return;
+        }
         const res = await fetch("/api/me", {
           headers: { Authorization: `Bearer ${token}` },
         });

@@ -28,6 +28,10 @@ export default function HistoryPage() {
     const load = async () => {
       try {
         const token = await getIdToken();
+        if (!token) {
+          setError("로그인이 필요합니다.");
+          return;
+        }
         const res = await fetch("/api/generations?limit=20", {
           headers: { Authorization: `Bearer ${token}` },
         });

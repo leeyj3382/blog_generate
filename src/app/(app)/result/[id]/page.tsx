@@ -38,6 +38,9 @@ export default function ResultPage() {
     const load = async () => {
       try {
         const token = await getIdToken();
+        if (!token) {
+          throw new Error("로그인이 필요합니다.");
+        }
         const res = await fetch(`/api/generations/${params.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });

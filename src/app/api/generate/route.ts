@@ -68,7 +68,10 @@ async function fetchReferenceTextWithPlaywright(url: string) {
           const main = document.querySelector("main");
           const body = document.body;
           const text =
-            article?.textContent || main?.textContent || body?.textContent || "";
+            article?.textContent ||
+            main?.textContent ||
+            body?.textContent ||
+            "";
           return text.replace(/\s+/g, " ").trim();
         });
         if (frameText.length > bestText.length) {
@@ -98,7 +101,12 @@ export async function POST(request: Request) {
   if (!limit.ok) {
     return NextResponse.json(
       { error: "Rate limit exceeded" },
-      { status: 429, headers: { "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)) } }
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)),
+        },
+      },
     );
   }
 
@@ -121,7 +129,7 @@ export async function POST(request: Request) {
   try {
     await adminDb.runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
-      const data = snap.exists ? snap.data() ?? {} : {};
+      const data = snap.exists ? (snap.data() ?? {}) : {};
       const credits = typeof data.credits === "number" ? data.credits : 1;
       const freeTrialUsed = Boolean(data.freeTrialUsed);
 
@@ -153,9 +161,15 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof Error && error.message === "INSUFFICIENT_CREDITS") {
-      return NextResponse.json({ error: "Insufficient credits" }, { status: 402 });
+      return NextResponse.json(
+        { error: "Insufficient credits" },
+        { status: 402 },
+      );
     }
-    return NextResponse.json({ error: "Credit transaction failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Credit transaction failed" },
+      { status: 500 },
+    );
   }
 
   const generationId = adminDb.collection("generations").doc().id;
@@ -164,20 +178,23 @@ export async function POST(request: Request) {
   const referenceUrls = input.referenceUrls ?? [];
   let fetchedReferenceCount = 0;
 
+  let stage = "init";
   try {
+    stage = "fetch_references";
     if (referenceUrls.length) {
       const fetched = await Promise.all(
         referenceUrls.map(async (url) => {
           const plain = await fetchReferenceText(url);
           if (plain) return plain;
           return fetchReferenceTextWithPlaywright(url);
-        })
+        }),
       );
       fetched.filter(Boolean).forEach((text) => referenceTexts.push(text!));
       fetchedReferenceCount = fetched.filter(Boolean).length;
     }
 
     if (referenceTexts.length && input.useReferenceStyle !== false) {
+      stage = "style_profile";
       const prompt = buildStyleProfilePrompt(referenceTexts);
       const result = await createJsonCompletion({
         ...prompt,
@@ -186,6 +203,7 @@ export async function POST(request: Request) {
       styleProfile = result as Record<string, unknown>;
     }
 
+    stage = "draft";
     const draftPrompt = buildDraftPrompt({
       ...input,
       styleProfile,
@@ -195,6 +213,7 @@ export async function POST(request: Request) {
       model: "gpt-5-mini",
     });
 
+    stage = "rewrite";
     const rewritePrompt = buildRewritePrompt({
       draft,
       platform: input.platform,
@@ -206,6 +225,7 @@ export async function POST(request: Request) {
       model: "gpt-5-mini",
     });
 
+    stage = "persist";
     const output = finalOutput as Record<string, unknown>;
     const titleCandidate = (() => {
       const titles = output["titleCandidates"];
@@ -214,28 +234,31 @@ export async function POST(request: Request) {
       return typeof first === "string" ? first : null;
     })();
 
-    await adminDb.collection("generations").doc(generationId).set({
-      uid,
-      platform: input.platform,
-      purpose: input.purpose,
-      topic: input.topic,
-      keywords: input.keywords,
-      length: input.length,
-      extraPrompt: input.extraPrompt ?? null,
-      referencesProvided: Boolean(referenceTexts.length),
-      referenceUrls,
-      referenceStats: {
-        urlCount: referenceUrls.length,
-        fetchedCount: fetchedReferenceCount,
-        textCount: referenceTexts.length,
-      },
-      styleProfile,
-      inputSnapshot: input,
-      output,
-      status: "success",
-      error: null,
-      createdAt,
-    });
+    await adminDb
+      .collection("generations")
+      .doc(generationId)
+      .set({
+        uid,
+        platform: input.platform,
+        purpose: input.purpose,
+        topic: input.topic,
+        keywords: input.keywords,
+        length: input.length,
+        extraPrompt: input.extraPrompt ?? null,
+        referencesProvided: Boolean(referenceTexts.length),
+        referenceUrls,
+        referenceStats: {
+          urlCount: referenceUrls.length,
+          fetchedCount: fetchedReferenceCount,
+          textCount: referenceTexts.length,
+        },
+        styleProfile,
+        inputSnapshot: input,
+        output,
+        status: "success",
+        error: null,
+        createdAt,
+      });
 
     await adminDb
       .collection("users")
@@ -273,30 +296,35 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error("[generate] failed", { stage, errorMessage });
 
-    await adminDb.collection("generations").doc(generationId).set({
-      uid,
-      platform: input.platform,
-      purpose: input.purpose,
-      topic: input.topic,
-      keywords: input.keywords,
-      length: input.length,
-      extraPrompt: input.extraPrompt ?? null,
-      referencesProvided: Boolean(referenceTexts.length),
-      referenceUrls,
-      referenceStats: {
-        urlCount: referenceUrls.length,
-        fetchedCount: fetchedReferenceCount,
-        textCount: referenceTexts.length,
-      },
-      styleProfile,
-      inputSnapshot: input,
-      output: null,
-      status: "failed",
-      error: errorMessage,
-      createdAt,
-    });
+    await adminDb
+      .collection("generations")
+      .doc(generationId)
+      .set({
+        uid,
+        platform: input.platform,
+        purpose: input.purpose,
+        topic: input.topic,
+        keywords: input.keywords,
+        length: input.length,
+        extraPrompt: input.extraPrompt ?? null,
+        referencesProvided: Boolean(referenceTexts.length),
+        referenceUrls,
+        referenceStats: {
+          urlCount: referenceUrls.length,
+          fetchedCount: fetchedReferenceCount,
+          textCount: referenceTexts.length,
+        },
+        styleProfile,
+        inputSnapshot: input,
+        output: null,
+        status: "failed",
+        error: `${stage}: ${errorMessage}`,
+        createdAt,
+      });
 
     await adminDb
       .collection("users")
@@ -326,6 +354,9 @@ export async function POST(request: Request) {
     }
     await userRef.update(rollback);
 
-    return NextResponse.json({ error: "Generation failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Generation failed", stage, message: errorMessage },
+      { status: 500 },
+    );
   }
 }

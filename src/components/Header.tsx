@@ -30,7 +30,9 @@ export default function Header() {
         <Link href="/templates" className="text-gray-600 hover:text-black">
           템플릿
         </Link>
-        {loading ? null : user ? (
+        {loading ? (
+          <span className="text-gray-500">로그인 상태 확인 중...</span>
+        ) : user ? (
           <>
             <Link href="/generate" className="text-gray-600 hover:text-black">
               생성기
@@ -38,6 +40,9 @@ export default function Header() {
             <Link href="/me" className="text-gray-600 hover:text-black">
               마이페이지
             </Link>
+            <span className="text-gray-500">
+              {user.email ?? "로그인됨"}
+            </span>
             <button
               type="button"
               onClick={handleLogout}
