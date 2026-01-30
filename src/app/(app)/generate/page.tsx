@@ -4,8 +4,32 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getIdToken } from "@/lib/authClient";
 
+// 섹션 구분을 위한 컴포넌트
+const Section = ({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) => (
+  <div className="space-y-4 pb-6 border-b border-[color:var(--border)] last:border-0 last:pb-0">
+    <div className="space-y-1">
+      <h3 className="text-lg font-semibold text-[color:var(--foreground)]">
+        {title}
+      </h3>
+      {description && (
+        <p className="text-sm text-[color:var(--text-muted)]">{description}</p>
+      )}
+    </div>
+    <div className="grid gap-5">{children}</div>
+  </div>
+);
+
 export default function GeneratePage() {
   const router = useRouter();
+  // ... (기존 state 변수들은 그대로 유지)
   const [platform, setPlatform] = useState("blog");
   const [purpose, setPurpose] = useState("review");
   const [topic, setTopic] = useState("");
@@ -23,6 +47,7 @@ export default function GeneratePage() {
   const [phase, setPhase] = useState("초안 준비 중");
 
   const onSubmit = async (event: React.FormEvent) => {
+    // ... (기존 로직 동일)
     event.preventDefault();
     setLoading(true);
     setError(null);
@@ -39,7 +64,10 @@ export default function GeneratePage() {
         platform,
         purpose,
         topic,
-        keywords: keywords.split(",").map((k) => k.trim()).filter(Boolean),
+        keywords: keywords
+          .split(",")
+          .map((k) => k.trim())
+          .filter(Boolean),
         length,
         references: references
           .split("\n\n")
@@ -71,11 +99,7 @@ export default function GeneratePage() {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        const detail = data?.stage
-          ? `${data.error ?? "생성 실패"} (stage: ${data.stage})`
-          : data.error ?? "생성 실패";
-        throw new Error(detail);
+        throw new Error("생성 실패");
       }
 
       const data = await res.json();
@@ -89,6 +113,7 @@ export default function GeneratePage() {
   };
 
   useEffect(() => {
+    // ... (기존 로직 동일)
     if (!loading) return;
     let value = 10;
     const timer = setInterval(() => {
@@ -107,111 +132,207 @@ export default function GeneratePage() {
   }, [loading]);
 
   return (
-    <main className="p-8 max-w-3xl mx-auto space-y-6">
-      <h1 className="text-xl font-semibold">생성기</h1>
-      <form className="space-y-4 glass p-6 rounded-2xl" onSubmit={onSubmit}>
-        <div className="grid grid-cols-3 gap-3">
-          <select
-            className="border bg-transparent p-2 rounded"
-            value={platform}
-            onChange={(e) => setPlatform(e.target.value)}
+    <main className="min-h-screen bg-[color:var(--bg-soft)] py-12 px-4">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <header className="space-y-2 mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">
+            새로운 글 생성하기
+          </h1>
+          <p className="text-[color:var(--text-muted)]">
+            AI가 당신의 브랜드 톤을 학습하여 완벽한 초안을 작성합니다.
+          </p>
+        </header>
+
+        <form
+          className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-3xl p-8 shadow-sm space-y-8"
+          onSubmit={onSubmit}
+        >
+          <Section
+            title="기본 설정"
+            description="글의 목적과 형식을 선택해주세요."
           >
-            <option value="blog">blog</option>
-            <option value="sns">sns</option>
-            <option value="store">store</option>
-          </select>
-          <select
-            className="border bg-transparent p-2 rounded"
-            value={purpose}
-            onChange={(e) => setPurpose(e.target.value)}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase text-[color:var(--text-muted)]">
+                  플랫폼
+                </label>
+                <select
+                  className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-3 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all"
+                  value={platform}
+                  onChange={(e) => setPlatform(e.target.value)}
+                >
+                  <option value="blog">블로그</option>
+                  <option value="sns">SNS (인스타그램/페이스북)</option>
+                  <option value="store">상세페이지 (스토어)</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase text-[color:var(--text-muted)]">
+                  목적
+                </label>
+                <select
+                  className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-3 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all"
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                >
+                  <option value="review">후기/리뷰</option>
+                  <option value="promo">홍보/프로모션</option>
+                  <option value="info">정보성 컨텐츠</option>
+                  <option value="ad">광고</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase text-[color:var(--text-muted)]">
+                  길이
+                </label>
+                <select
+                  className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-3 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all"
+                  value={length}
+                  onChange={(e) => setLength(e.target.value)}
+                >
+                  <option value="normal">짧게</option>
+                  <option value="long">보통</option>
+                  <option value="xlong">길게</option>
+                </select>
+              </div>
+            </div>
+          </Section>
+
+          <Section
+            title="핵심 내용"
+            description="어떤 내용의 글을 쓰고 싶으신가요?"
           >
-            <option value="promo">promo</option>
-            <option value="review">review</option>
-            <option value="ad">ad</option>
-            <option value="info">info</option>
-            <option value="etc">etc</option>
-          </select>
-          <select
-            className="border bg-transparent p-2 rounded"
-            value={length}
-            onChange={(e) => setLength(e.target.value)}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">주제</label>
+              <input
+                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-4 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all placeholder:text-[color:var(--text-muted)]/50"
+                placeholder="예: 30대 직장인을 위한 주말 힐링 여행지 추천"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                maxLength={120}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">핵심 키워드</label>
+              <input
+                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-4 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all placeholder:text-[color:var(--text-muted)]/50"
+                placeholder="쉼표로 구분 (예: 여행, 힐링, 가성비) 3개 이상"
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+                required
+              />
+            </div>
+          </Section>
+
+          <Section
+            title="레퍼런스 & 스타일"
+            description="참고할 문체나 내용을 입력하면 분석하여 반영합니다."
           >
-            <option value="normal">normal</option>
-            <option value="long">long</option>
-            <option value="xlong">xlong</option>
-          </select>
-        </div>
-        <input
-          className="w-full border bg-transparent p-2 rounded"
-          placeholder="주제 (예: OO 비타민 2주 사용 후기)"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          maxLength={120}
-          required
-        />
-        <input
-          className="w-full border bg-transparent p-2 rounded"
-          placeholder="키워드 3~10개 (쉼표로 구분)"
-          value={keywords}
-          onChange={(e) => setKeywords(e.target.value)}
-          required
-        />
-        <textarea
-          className="w-full border bg-transparent p-2 rounded min-h-[120px]"
-          placeholder="레퍼런스 본문 (여러 개면 빈 줄로 구분)"
-          value={references}
-          onChange={(e) => setReferences(e.target.value)}
-        />
-        <textarea
-          className="w-full border bg-transparent p-2 rounded min-h-[80px]"
-          placeholder="레퍼런스 URL (한 줄에 하나씩)"
-          value={referenceUrls}
-          onChange={(e) => setReferenceUrls(e.target.value)}
-        />
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={useReferenceStyle}
-            onChange={(e) => setUseReferenceStyle(e.target.checked)}
-          />
-          레퍼런스 스타일 반영
-        </label>
-        <textarea
-          className="w-full border bg-transparent p-2 rounded min-h-[80px]"
-          placeholder="추가 프롬프트"
-          value={extraPrompt}
-          onChange={(e) => setExtraPrompt(e.target.value)}
-          maxLength={600}
-        />
-        <input
-          className="w-full border bg-transparent p-2 rounded"
-          placeholder="필수 포함 문구 (쉼표로 구분)"
-          value={mustInclude}
-          onChange={(e) => setMustInclude(e.target.value)}
-        />
-        <input
-          className="w-full border bg-transparent p-2 rounded"
-          placeholder="금칙어 (쉼표로 구분)"
-          value={bannedWords}
-          onChange={(e) => setBannedWords(e.target.value)}
-        />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button className="btn-primary" type="submit" disabled={loading}>
-          {loading ? "생성 중..." : "생성하기"}
-        </button>
-      </form>
+            <div className="grid md:grid-cols-2 gap-4">
+              <textarea
+                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-4 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all min-h-[150px] resize-none"
+                placeholder="참고할 글의 본문을 붙여넣으세요..."
+                value={references}
+                onChange={(e) => setReferences(e.target.value)}
+              />
+              <textarea
+                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-4 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all min-h-[150px] resize-none"
+                placeholder="또는 레퍼런스 URL을 입력하세요 (줄바꿈으로 구분)"
+                value={referenceUrls}
+                onChange={(e) => setReferenceUrls(e.target.value)}
+              />
+            </div>
+            <label className="flex items-center gap-2 p-2 cursor-pointer w-fit">
+              <div
+                className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${useReferenceStyle ? "bg-[color:var(--accent)] border-[color:var(--accent)]" : "border-[color:var(--text-muted)]"}`}
+              >
+                {useReferenceStyle && (
+                  <span className="text-white text-xs">✓</span>
+                )}
+              </div>
+              <input
+                type="checkbox"
+                className="hidden"
+                checked={useReferenceStyle}
+                onChange={(e) => setUseReferenceStyle(e.target.checked)}
+              />
+              <span className="text-base">
+                레퍼런스의 문체(Tone & Manner)를 반영합니다.
+              </span>
+            </label>
+          </Section>
+
+          <Section
+            title="상세 조정"
+            description="필수 포함 문구나 금칙어 등 세부 제약사항을 설정합니다. (선택)"
+          >
+            <textarea
+              className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-4 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all min-h-[100px]"
+              placeholder="AI에게 전달할 추가 요청사항 (예: 너무 딱딱하지 않게, 사람이 쓴것처럼)"
+              value={extraPrompt}
+              onChange={(e) => setExtraPrompt(e.target.value)}
+              maxLength={600}
+            />
+            <div className="grid md:grid-cols-2 gap-4">
+              <input
+                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-3 rounded-xl text-sm"
+                placeholder="필수 포함 문구 (쉼표로 구분)"
+                value={mustInclude}
+                onChange={(e) => setMustInclude(e.target.value)}
+              />
+              <input
+                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-3 rounded-xl text-sm"
+                placeholder="금칙어 (쉼표로 구분)"
+                value={bannedWords}
+                onChange={(e) => setBannedWords(e.target.value)}
+              />
+            </div>
+          </Section>
+
+          {error && (
+            <div className="p-4 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">
+              {error}
+            </div>
+          )}
+
+          <div className="pt-4">
+            <button
+              className="w-full btn-primary py-4 text-lg font-semibold rounded-xl shadow-lg shadow-[color:var(--accent)]/20 hover:shadow-[color:var(--accent)]/30 transition-all active:scale-[0.99]"
+              type="submit"
+              disabled={loading}
+            >
+              {loading
+                ? "AI가 글을 작성하고 있습니다..."
+                : "✨ 블로그 글 생성하기"}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* 로딩 오버레이 (기존 디자인 유지하되 스타일 조금 다듬음) */}
       {loading && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="glass rounded-2xl p-6 w-[320px] text-center space-y-4">
-            <div className="w-12 h-12 mx-auto border-2 border-[color:var(--accent)] border-t-transparent rounded-full spin" />
-            <p className="text-sm blink">{phase}</p>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100]">
+          <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-3xl p-8 w-[360px] text-center space-y-6 shadow-2xl">
+            <div className="relative w-16 h-16 mx-auto">
+              <div className="absolute inset-0 border-4 border-[color:var(--surface-2)] rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-[color:var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-lg font-semibold animate-pulse">{phase}</p>
+              <p className="text-sm text-[color:var(--text-muted)]">
+                잠시만 기다려주세요.
+              </p>
+            </div>
             <div className="h-2 bg-[color:var(--surface-2)] rounded-full overflow-hidden">
               <div
-                className="h-2 bg-[color:var(--accent)] transition-all"
+                className="h-2 bg-[color:var(--accent)] transition-all duration-300 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-xs text-[color:var(--text-muted)]">{progress}%</p>
+            <p className="text-xs text-[color:var(--text-muted)] font-mono">
+              {progress}%
+            </p>
           </div>
         </div>
       )}

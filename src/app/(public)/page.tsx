@@ -40,7 +40,7 @@ export default function HomePage() {
   // --- [NEW] 텍스트 애니메이션 로직 ---
 
   // 마케팅/블로그 관련 긴 더미 텍스트
-  const dummyText = `디지털 세상에서 브랜드의 언어는 곧 그 브랜드의 인격입니다. 단순히 정보를 전달하는 것을 넘어, 고객의 마음 깊은 곳에 닿을 수 있는 공명(Resonance)을 만들어내야 합니다. 우리의 AI 엔진은 수만 개의 성공적인 캠페인을 분석하여, 당신의 브랜드에 가장 적합한 톤앤매너를 찾아냅니다. 키워드 사이의 미묘한 뉘앙스까지 포착하여, 마치 오랜 경험을 가진 에디터가 작성한 듯한 유려한 흐름을 완성합니다. 클릭을 유도하는 매력적인 헤드라인부터 신뢰를 쌓아가는 본문, 그리고 자연스러운 행동 유도까지. 이제 고민하지 말고, 데이터가 증명하는 최적의 스토리텔링을 경험해보세요. 당신의 이야기는 더 널리, 더 깊게 퍼져나갈 준비가 되었습니다.`;
+  const dummyText = `디지털 세상에서 브랜드의 언어는 곧 그 브랜드의 인격입니다. 단순히 정보를 전달하는 것을 넘어, 고객의 마음 깊은 곳에 닿을 수 있는 공명(Resonance)을 만들어내야 합니다. 우리의 AI 엔진은 수만 개의 성공적인 캠페인을 분석하여, 당신의 브랜드에 가장 적합한 톤앤매너를 찾아냅니다. 키워드 사이의 미묘한 뉘앙스까지 포착해 마치 오랜 경험을 가진 에디터가 작성한 듯한 유려한 흐름을 완성하고, 클릭을 유도하는 매력적인 헤드라인부터 신뢰를 쌓아가는 본문, 그리고 자연스러운 행동 유도까지 하나의 전략으로 설계합니다. 이제 고민하지 말고 데이터가 증명하는 최적의 스토리텔링을 경험해보세요. 당신의 이야기는 더 널리, 더 깊게 퍼져나갈 준비가 되어 있으며, 브랜드의 가치는 언어를 통해 가장 선명하게 기억됩니다.`;
 
   const words = dummyText.split(" ");
   const [animationKey, setAnimationKey] = useState(0);
@@ -55,7 +55,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen">
-      <section className="relative max-w-6xl mx-auto px-6 pt-20 pb-16 grid gap-12 lg:grid-cols-[1.15fr_0.85fr] items-center overflow-hidden rounded-[32px] border border-[color:var(--border)]">
+      <section className="relative max-w-6xl mx-auto px-6 pt-20 pb-16 grid gap-12 lg:grid-cols-[1.15fr_0.85fr] items-center overflow-hidden rounded-[32px] border border-[color:var(--border)] mt-8">
         <div className="absolute inset-0 bg-[color:var(--bg-soft)]/90" />
         <div className="hero-grid" />
 
@@ -70,7 +70,7 @@ export default function HomePage() {
               {words.map((word, i) => (
                 <span
                   key={i}
-                  className="word-animation text-sm md:text-base text-[color:var(--text-muted)] opacity-60 font-light tracking-wide"
+                  className="word-animation text-base md:text-lg text-[color:var(--text-mutedd)] opacity-60 font-medium tracking-wide"
                   style={{
                     // 단어마다 0.12초씩 지연되어 순차적으로 등장
                     animationDelay: `${i * 0.12}s`,
@@ -85,7 +85,7 @@ export default function HomePage() {
 
         {/* 메인 텍스트 (기존 유지) */}
         <div className="space-y-6 relative z-10">
-          <p className="text-sm uppercase tracking-[0.3em] text-[color:var(--accent)]">
+          <p className="text-lg font-bold uppercase tracking-[0.3em] text-[color:var(--accent)]">
             AI Content Atelier
           </p>
           <h1 className="text-4xl md:text-5xl font-semibold leading-tight">
@@ -93,7 +93,7 @@ export default function HomePage() {
             <br />
             프리미엄 블로그 생성기
           </h1>
-          <p className="text-base text-[color:var(--text-muted)] leading-relaxed max-w-xl">
+          <p className="text-base text-[color:var(--text)] leading-relaxed max-w-xl">
             레퍼런스를 읽고 스타일 프로필을 추출한 뒤, 초안 생성과 검수
             리라이트까지 자동으로 연결합니다. 실전 마케팅 문장을 바로 가져다 쓸
             수 있어요.

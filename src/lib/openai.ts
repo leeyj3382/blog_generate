@@ -35,8 +35,7 @@ export async function createJsonCompletion(options: {
   model?: string;
   temperature?: number;
 }): Promise<JsonValue> {
-  const model =
-    options.model ?? process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+  const model = options.model ?? process.env.OPENAI_MODEL ?? "gpt-4o-mini";
   const supportsTemperature =
     !model.startsWith("o4") && !model.startsWith("gpt-5");
   const response = await client.chat.completions.create({
