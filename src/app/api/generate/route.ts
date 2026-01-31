@@ -42,6 +42,34 @@ async function fetchReferenceText(url: string) {
   return null;
 }
 
+async function fetchReferenceTextWithCrawler(url: string) {
+  const crawlerUrl = process.env.CRAWLER_URL;
+  if (!crawlerUrl) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25_000);
+  try {
+    const res = await fetch(`${crawlerUrl.replace(/\/$/, "")}/extract`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.CRAWLER_API_KEY
+          ? { "X-Crawler-Key": process.env.CRAWLER_API_KEY }
+          : {}),
+      },
+      body: JSON.stringify({ url }),
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { text?: string };
+    if (!data.text || typeof data.text !== "string") return null;
+    return data.text;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchReferenceTextWithPlaywright(url: string) {
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({ headless: true });
@@ -187,7 +215,12 @@ export async function POST(request: Request) {
         referenceUrls.map(async (url) => {
           const plain = await fetchReferenceText(url);
           if (plain) return plain;
-          return fetchReferenceTextWithPlaywright(url);
+          const crawler = await fetchReferenceTextWithCrawler(url);
+          if (crawler) return crawler;
+          if (process.env.NODE_ENV !== "production") {
+            return fetchReferenceTextWithPlaywright(url);
+          }
+          return null;
         }),
       );
       fetched.filter(Boolean).forEach((text) => referenceTexts.push(text!));
