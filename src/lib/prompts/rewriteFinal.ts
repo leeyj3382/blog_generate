@@ -3,25 +3,60 @@ import { commonSystemPrompt } from "@/lib/prompts/system";
 export function buildRewritePrompt(input: {
   draft: unknown;
   platform: "blog" | "sns" | "store";
+  requiredContent?: string[];
   mustInclude?: string[];
   bannedWords?: string[];
+  styleProfile?: Record<string, unknown> | null;
 }) {
   return {
     system: commonSystemPrompt,
-    user: `Rewrite the draft in Korean to be clean, non-repetitive, and compliant.
-- Must include (keep exact wording): ${input.mustInclude?.join(" | ") ?? "(none)"}
-- Banned words (must not appear): ${input.bannedWords?.join(" | ") ?? "(none)"}
-- Platform: ${input.platform}
+    user: `
+You are an editor and compliance reviewer.
+Your job is to produce the final publishable version.
 
-Rules:
-- Remove exaggerations.
-- Keep required phrases in natural positions.
-- If platform is store, enforce clear section structure and scannable bullets.
+Rewrite the draft in Korean so that it is ready for direct publication.
+
+Context:
+- Platform: ${input.platform}
+- Must include (verbatim): ${input.mustInclude?.join("\n") ?? "(none)"}
+- Required content notes (rewrite into style): ${input.requiredContent?.join("\n") ?? "(none)"}
+- Banned words (must not appear): ${input.bannedWords?.join(" | ") ?? "(none)"}
+- Style profile: ${JSON.stringify(input.styleProfile ?? {})}
+
+Checklist (mandatory):
+1. The style profile must be faithfully reflected.
+2. All required phrases must appear verbatim and naturally.
+3. Banned words must not appear.
+4. No exaggerated, misleading, or unsafe claims.
+5. Content must comply with Korean advertising, medical, and legal safety norms.
+
+Editing rules:
+- Preserve the original tone, rhythm, and writing style.
+- If styleProfile.speechLevel is "casual", use 반말 consistently; if "polite"/"formal", use 존댓말 consistently.
+- Fix issues by softening expressions rather than deleting content when possible.
+- Do NOT add new factual claims.
+- Do NOT explain edits.
+
+Platform-specific rules:
+Blog:
+- Maintain natural sentence flow.
+- Use short to medium paragraphs (2–4 sentences).
+- Prefer line breaks over dense blocks.
+
+SNS:
+- Use very short paragraphs (1–2 sentences).
+- Favor concise sentences with strong rhythm.
+- Remove unnecessary background explanations.
+
+Store:
+- Organize content into clear sections with headings.
+- Use bullet points for features and benefits.
+- Each bullet must be a single, scannable sentence.
 
 Draft JSON:
 ${JSON.stringify(input.draft)}
 
-Return final JSON with the same schema as draft.
+Return final JSON using the exact same schema as the draft.
 `,
   };
 }

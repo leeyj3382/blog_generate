@@ -203,7 +203,7 @@ export async function POST(request: Request) {
 
   const generationId = adminDb.collection("generations").doc().id;
   let styleProfile: Record<string, unknown> | null = null;
-  const referenceTexts: string[] = [...(input.references ?? [])];
+  const referenceTexts: string[] = [];
   const referenceUrls = input.referenceUrls ?? [];
   let fetchedReferenceCount = 0;
 
@@ -251,8 +251,10 @@ export async function POST(request: Request) {
     const rewritePrompt = buildRewritePrompt({
       draft,
       platform: input.platform,
+      requiredContent: input.requiredContent,
       mustInclude: input.mustInclude,
       bannedWords: input.bannedWords,
+      styleProfile,
     });
     const finalOutput = await createJsonCompletion({
       ...rewritePrompt,
@@ -261,6 +263,29 @@ export async function POST(request: Request) {
 
     stage = "persist";
     const output = finalOutput as Record<string, unknown>;
+    const mustInclude = input.mustInclude ?? [];
+    const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
+    const containsAll = (text: string) =>
+      mustInclude.every((phrase) => phrase && normalize(text).includes(normalize(phrase)));
+
+    const ensureIncludes = () => {
+      if (!mustInclude.length) return;
+      if (input.platform === "store") {
+        const sections = (output["sections"] as Record<string, string> | undefined) ?? {};
+        const merged = Object.values(sections).join(" ");
+        if (containsAll(merged)) return;
+        const appended = [...new Set(mustInclude)].join(" / ");
+        const next = { ...sections, cautions: `${sections.cautions ?? ""}\n${appended}`.trim() };
+        output["sections"] = next;
+        return;
+      }
+      const body = typeof output["body"] === "string" ? output["body"] : "";
+      if (containsAll(body)) return;
+      const appended = [...new Set(mustInclude)].join("\n");
+      output["body"] = `${body}\n${appended}`.trim();
+    };
+
+    ensureIncludes();
     const titleCandidate = (() => {
       const titles = output["titleCandidates"];
       if (!Array.isArray(titles) || titles.length === 0) return null;

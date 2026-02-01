@@ -35,7 +35,7 @@ export default function GeneratePage() {
   const [topic, setTopic] = useState("");
   const [keywords, setKeywords] = useState("");
   const [length, setLength] = useState("long");
-  const [references, setReferences] = useState("");
+  const [requiredPhrases, setRequiredPhrases] = useState("");
   const [referenceUrls, setReferenceUrls] = useState("");
   const [useReferenceStyle, setUseReferenceStyle] = useState(true);
   const [extraPrompt, setExtraPrompt] = useState("");
@@ -69,16 +69,16 @@ export default function GeneratePage() {
           .map((k) => k.trim())
           .filter(Boolean),
         length,
-        references: references
-          .split("\n\n")
-          .map((r) => r.trim())
-          .filter(Boolean),
         referenceUrls: referenceUrls
           .split("\n")
           .map((r) => r.trim())
           .filter(Boolean),
         useReferenceStyle,
         extraPrompt: extraPrompt || undefined,
+        requiredContent: requiredPhrases
+          .split("\n")
+          .map((m) => m.trim())
+          .filter(Boolean),
         mustInclude: mustInclude
           .split(",")
           .map((m) => m.trim())
@@ -226,15 +226,15 @@ export default function GeneratePage() {
           </Section>
 
           <Section
-            title="레퍼런스 & 스타일"
-            description="참고할 문체나 내용을 입력하면 분석하여 반영합니다."
+            title="레퍼런스 & 필수 포함 내용"
+            description="링크는 문체 분석에만 사용하고, 텍스트 입력은 말투에 맞게 풀어 써서 포함합니다."
           >
             <div className="grid md:grid-cols-2 gap-4">
               <textarea
                 className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-4 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all min-h-[150px] resize-none"
-                placeholder="참고할 글의 본문을 붙여넣으세요..."
-                value={references}
-                onChange={(e) => setReferences(e.target.value)}
+                placeholder="반드시 포함해야 하는 내용 (한 줄에 하나씩)"
+                value={requiredPhrases}
+                onChange={(e) => setRequiredPhrases(e.target.value)}
               />
               <textarea
                 className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-4 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all min-h-[150px] resize-none"
@@ -277,7 +277,7 @@ export default function GeneratePage() {
             <div className="grid md:grid-cols-2 gap-4">
               <input
                 className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-3 rounded-xl text-sm"
-                placeholder="필수 포함 문구 (쉼표로 구분)"
+                placeholder="고정 문구(법적/브랜드) (쉼표로 구분, 그대로 포함)"
                 value={mustInclude}
                 onChange={(e) => setMustInclude(e.target.value)}
               />

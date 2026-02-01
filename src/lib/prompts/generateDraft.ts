@@ -7,6 +7,7 @@ type DraftInput = {
   keywords: string[];
   length: "normal" | "long" | "xlong";
   extraPrompt?: string | null;
+  requiredContent?: string[];
   mustInclude?: string[];
   bannedWords?: string[];
   productInfo?: {
@@ -25,12 +26,12 @@ export function buildDraftPrompt(input: DraftInput) {
     blog: {
       titleCandidates: ["..."],
       body: "...",
-      hashtags: ["#..."] ,
+      hashtags: ["#..."],
       cta: "...",
     },
     sns: {
       body: "...",
-      hashtags: ["#..."] ,
+      hashtags: ["#..."],
       cta: "...",
     },
     store: {
@@ -48,22 +49,42 @@ export function buildDraftPrompt(input: DraftInput) {
 
   return {
     system: commonSystemPrompt,
-    user: `Write a draft in Korean. Follow constraints strictly and avoid banned words.
+    user: `
+You are a professional human writer.
+
+Write an original Korean text that strictly follows the given Style Profile.
+The reader must feel that the same person wrote this text.
+
+Priority order (highest to lowest):
+1. Style Profile (mandatory rules)
+2. Platform conventions
+3. User inputs (topic, keywords, required phrases)
+4. Natural readability
+
+Writing rules:
+- Do NOT sound like an AI, guide, or assistant.
+- Do NOT explain what you are doing.
+- Follow the tone, rhythm, and structure from the style profile.
+- If styleProfile.speechLevel is "casual", use 반말 consistently; if "polite"/"formal", use 존댓말 consistently.
+- Keywords must be woven naturally into sentences.
+- All "Must include" phrases must appear verbatim and naturally.
+- "Required content notes" must be rewritten into the target style and incorporated naturally.
+- Avoid mechanical or list-like insertion of keywords.
+
+Context:
 - Platform: ${input.platform}
 - Purpose: ${input.purpose}
 - Topic: ${input.topic}
 - Keywords: ${input.keywords.join(", ")}
 - Length: ${input.length}
-- Must include: ${input.mustInclude?.join(" | ") ?? "(none)"}
+- Must include (verbatim): ${input.mustInclude?.join("\n") ?? "(none)"}
+- Required content notes (rewrite into style): ${input.requiredContent?.join("\n") ?? "(none)"}
 - Banned words: ${input.bannedWords?.join(" | ") ?? "(none)"}
 - Extra prompt: ${input.extraPrompt ?? "(none)"}
 - Product info: ${JSON.stringify(input.productInfo ?? {})}
 - Style profile: ${JSON.stringify(input.styleProfile ?? {})}
 
-Rules:
-- Include concrete examples/situations/components; avoid vague repetition.
-- Ensure keywords are naturally included.
-- Output JSON matching this schema for the platform:
+Output JSON matching this schema:
 ${JSON.stringify(schemaByPlatform[input.platform], null, 2)}
 `,
   };

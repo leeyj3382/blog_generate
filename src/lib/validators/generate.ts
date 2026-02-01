@@ -25,6 +25,7 @@ export const generateSchema = z.object({
   referenceUrls: z.array(z.string().url()).optional(),
   useReferenceStyle: z.boolean().optional(),
   extraPrompt: z.string().max(600).optional(),
+  requiredContent: z.array(z.string()).optional(),
   mustInclude: z.array(z.string()).optional(),
   bannedWords: z.array(z.string()).optional(),
   productInfo: productInfoSchema,
