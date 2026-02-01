@@ -35,16 +35,24 @@ Checklist (mandatory):
 
 Editing rules:
 - Preserve the original tone, rhythm, and writing style.
-- If styleProfile.speechLevel is "casual", use 반말 consistently; if "polite"/"formal", use 존댓말 consistently.
 - Fix issues by softening expressions rather than deleting content when possible.
 - Do NOT add new factual claims.
 - Do NOT explain edits.
+
+Speech level handling (IMPORTANT):
+- Do NOT mix speech levels.
+- If speechLevel is "polite" or "formal": keep 존댓말 consistently.
+- If speechLevel is "casual": DO NOT rewrite into chatty spoken 반말.
+  * Prefer "~했다/~느껴졌다/~같다".
+  * Reduce "~했어/~야" frequency to at most once per paragraph, never consecutive.
+  * Keep it publishable: structured paragraphs, not dialogue.
 
 Platform-specific rules:
 Blog:
 - Maintain natural sentence flow.
 - Use short to medium paragraphs (2–4 sentences).
 - Prefer line breaks over dense blocks.
+- Write as a publishable review narrative, not conversation.
 
 SNS:
 - Use very short paragraphs (1–2 sentences).

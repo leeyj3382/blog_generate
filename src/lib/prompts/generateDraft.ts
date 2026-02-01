@@ -66,7 +66,6 @@ Writing rules:
 - Do NOT sound like an AI, guide, or assistant.
 - Do NOT explain what you are doing.
 - Follow the tone, rhythm, and structure from the style profile.
-- If styleProfile.speechLevel is "casual", use 반말 consistently; if "polite"/"formal", use 존댓말 consistently.
 - Keywords must be woven naturally into sentences.
 - All "Must include" phrases must appear verbatim and naturally.
 - "Required content notes" must be rewritten into the target style and incorporated naturally.
@@ -74,6 +73,21 @@ Writing rules:
 - Never copy photo notes verbatim; paraphrase them into natural sentences matching the style profile and place them near the placeholder.
 - Distribute multiple placeholders across the flow; do not cluster them at the end.
 - Avoid mechanical or list-like insertion of keywords.
+
+Speech level handling (IMPORTANT):
+- Do NOT mix speech levels within the same output.
+- If styleProfile.speechLevel is "formal" or "polite": use 존댓말 consistently.
+- If styleProfile.speechLevel is "casual":
+  Treat it as "relaxed, publishable writing" (NOT chatty spoken 반말).
+  * Prefer endings like "~했다", "~느껴졌다", "~같다", "~하더라" (review narration tone).
+  * Avoid strong spoken casual endings like "~했어/~야".
+    - If you use them, limit to at most once per paragraph and never consecutively.
+  * The output must read like a structured blog post, not a conversation.
+
+Platform writing style:
+- Blog: readable paragraphs, natural flow, review narration (not dialogue).
+- SNS: concise, rhythm-focused.
+- Store: clear sections, scannable bullets.
 
 Context:
 - Platform: ${input.platform}
