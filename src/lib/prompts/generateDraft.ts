@@ -8,6 +8,7 @@ type DraftInput = {
   length: "normal" | "long" | "xlong";
   extraPrompt?: string | null;
   requiredContent?: string[];
+  photoGuides?: { placeholder: string; notes?: string }[];
   mustInclude?: string[];
   bannedWords?: string[];
   productInfo?: {
@@ -69,6 +70,8 @@ Writing rules:
 - Keywords must be woven naturally into sentences.
 - All "Must include" phrases must appear verbatim and naturally.
 - "Required content notes" must be rewritten into the target style and incorporated naturally.
+- Insert each photo placeholder text verbatim in the body and weave the related notes into nearby sentences.
+- Distribute multiple placeholders across the flow; do not cluster them at the end.
 - Avoid mechanical or list-like insertion of keywords.
 
 Context:
@@ -79,6 +82,8 @@ Context:
 - Length: ${input.length}
 - Must include (verbatim): ${input.mustInclude?.join("\n") ?? "(none)"}
 - Required content notes (rewrite into style): ${input.requiredContent?.join("\n") ?? "(none)"}
+- Photo placeholders (insert verbatim) and notes (blend nearby):
+${input.photoGuides?.map((p) => `- ${p.placeholder}${p.notes ? ` :: ${p.notes}` : ""}`).join("\n") ?? "(none)"}
 - Banned words: ${input.bannedWords?.join(" | ") ?? "(none)"}
 - Extra prompt: ${input.extraPrompt ?? "(none)"}
 - Product info: ${JSON.stringify(input.productInfo ?? {})}

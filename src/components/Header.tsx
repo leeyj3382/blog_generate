@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebaseClient";
 import { useAuth } from "@/components/AuthProvider";
+import { useState } from "react";
 
 export default function Header() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut(firebaseAuth);
@@ -88,9 +90,61 @@ export default function Header() {
 
         {/* 모바일용 메뉴 (화면이 작을 때만 보임) */}
         <div className="md:hidden">
-          {/* 필요 시 여기에 햄버거 메뉴 아이콘 추가 */}
+          <button
+            type="button"
+            className="border border-[color:var(--border)] rounded-lg px-3 py-2 text-sm"
+            onClick={() => setOpen((prev) => !prev)}
+            aria-expanded={open}
+            aria-label="메뉴 열기"
+          >
+            <span className="text-lg leading-none">☰</span>
+          </button>
         </div>
       </div>
+      {open && (
+        <div className="md:hidden border-t border-[color:var(--border)] px-6 py-4 text-sm">
+          <Link href="/pricing" className="block py-2 text-[color:var(--text-muted)] hover:text-[color:var(--accent)]">
+            가격
+          </Link>
+          <div className="h-px bg-[color:var(--border)]/60" />
+          <Link href="/guides" className="block py-2 text-[color:var(--text-muted)] hover:text-[color:var(--accent)]">
+            가이드
+          </Link>
+          <div className="h-px bg-[color:var(--border)]/60" />
+          <Link href="/templates" className="block py-2 text-[color:var(--text-muted)] hover:text-[color:var(--accent)]">
+            템플릿
+          </Link>
+          <div className="h-px bg-[color:var(--border)]/60" />
+          {loading ? (
+            <span className="block py-2 text-sm opacity-50">Loading...</span>
+          ) : user ? (
+            <div>
+              <Link href="/generate" className="block py-2 text-[color:var(--text-muted)] hover:text-[color:var(--accent)]">
+                생성기
+              </Link>
+              <div className="h-px bg-[color:var(--border)]/60" />
+              <Link href="/me" className="block py-2 text-[color:var(--text-muted)] hover:text-[color:var(--accent)]">
+                마이페이지
+              </Link>
+              <div className="h-px bg-[color:var(--border)]/60" />
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="mt-2 text-sm bg-[color:var(--surface)] border border-[color:var(--border)] px-4 py-2 rounded-full hover:bg-[color:var(--surface-2)] transition-colors"
+              >
+                로그아웃
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex mt-2 px-4 py-2 rounded-full bg-[color:var(--accent)] text-[color:var(--bg)] text-sm font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-[color:var(--accent)]/20"
+            >
+              로그인
+            </Link>
+          )}
+        </div>
+      )}
     </header>
   );
 }

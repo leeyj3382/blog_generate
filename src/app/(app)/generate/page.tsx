@@ -41,6 +41,9 @@ export default function GeneratePage() {
   const [extraPrompt, setExtraPrompt] = useState("");
   const [mustInclude, setMustInclude] = useState("");
   const [bannedWords, setBannedWords] = useState("");
+  const [photoGuides, setPhotoGuides] = useState([
+    { placeholder: "", notes: "" },
+  ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -83,6 +86,12 @@ export default function GeneratePage() {
           .split(",")
           .map((m) => m.trim())
           .filter(Boolean),
+        photoGuides: photoGuides
+          .map((row) => ({
+            placeholder: row.placeholder.trim(),
+            notes: row.notes.trim(),
+          }))
+          .filter((row) => row.placeholder.length > 0),
         bannedWords: bannedWords
           .split(",")
           .map((b) => b.trim())
@@ -227,20 +236,20 @@ export default function GeneratePage() {
 
           <Section
             title="레퍼런스 & 필수 포함 내용"
-            description="링크는 문체 분석에만 사용하고, 텍스트 입력은 말투에 맞게 풀어 써서 포함합니다."
+            description="레퍼런스 링크는 문체 분석에만 사용하며, 필수 포함 내용은 말투에 맞게 풀어 써서 포함합니다."
           >
             <div className="grid md:grid-cols-2 gap-4">
               <textarea
                 className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-4 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all min-h-[150px] resize-none"
-                placeholder="반드시 포함해야 하는 내용 (한 줄에 하나씩)"
-                value={requiredPhrases}
-                onChange={(e) => setRequiredPhrases(e.target.value)}
+                placeholder="또는 레퍼런스 URL을 입력해주세요. (엔터(Enter)로 구분)"
+                value={referenceUrls}
+                onChange={(e) => setReferenceUrls(e.target.value)}
               />
               <textarea
                 className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-4 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all min-h-[150px] resize-none"
-                placeholder="또는 레퍼런스 URL을 입력하세요 (줄바꿈으로 구분)"
-                value={referenceUrls}
-                onChange={(e) => setReferenceUrls(e.target.value)}
+                placeholder="반드시 포함해야 하는 내용을 입력해주세요. (엔터(Enter)로 구분)"
+                value={requiredPhrases}
+                onChange={(e) => setRequiredPhrases(e.target.value)}
               />
             </div>
             <label className="flex items-center gap-2 p-2 cursor-pointer w-fit">
@@ -264,6 +273,60 @@ export default function GeneratePage() {
           </Section>
 
           <Section
+            title="사진 삽입 가이드"
+            description="플레이스홀더 텍스트를 그대로 삽입하고, 설명 키워드는 주변 문장에 녹여냅니다."
+          >
+            <div className="space-y-4">
+              {photoGuides.map((row, index) => (
+                <div
+                  key={`photo-${index}`}
+                  className="grid md:grid-cols-[1.2fr_1.8fr_auto] gap-3 items-start"
+                >
+                  <input
+                    className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-3 rounded-xl text-sm"
+                    placeholder="플레이스홀더 (예: <넓고 쾌적한 식당 사진>)"
+                    value={row.placeholder}
+                    onChange={(e) => {
+                      const next = [...photoGuides];
+                      next[index] = { ...next[index], placeholder: e.target.value };
+                      setPhotoGuides(next);
+                    }}
+                  />
+                  <input
+                    className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-3 rounded-xl text-sm"
+                    placeholder="설명 키워드/문장 (선택)"
+                    value={row.notes}
+                    onChange={(e) => {
+                      const next = [...photoGuides];
+                      next[index] = { ...next[index], notes: e.target.value };
+                      setPhotoGuides(next);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn-outline px-3 py-2 text-sm"
+                    onClick={() => {
+                      const next = photoGuides.filter((_, i) => i !== index);
+                      setPhotoGuides(next.length ? next : [{ placeholder: "", notes: "" }]);
+                    }}
+                  >
+                    삭제
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="btn-outline w-fit"
+                onClick={() =>
+                  setPhotoGuides([...photoGuides, { placeholder: "", notes: "" }])
+                }
+              >
+                + 추가
+              </button>
+            </div>
+          </Section>
+
+          <Section
             title="상세 조정"
             description="필수 포함 문구나 금칙어 등 세부 제약사항을 설정합니다. (선택)"
           >
@@ -276,13 +339,13 @@ export default function GeneratePage() {
             />
             <div className="grid md:grid-cols-2 gap-4">
               <input
-                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-3 rounded-xl text-sm"
+                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-3 rounded-xl text-base"
                 placeholder="고정 문구(법적/브랜드) (쉼표로 구분, 그대로 포함)"
                 value={mustInclude}
                 onChange={(e) => setMustInclude(e.target.value)}
               />
               <input
-                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-3 rounded-xl text-sm"
+                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-3 rounded-xl text-base"
                 placeholder="금칙어 (쉼표로 구분)"
                 value={bannedWords}
                 onChange={(e) => setBannedWords(e.target.value)}

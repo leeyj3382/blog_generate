@@ -4,6 +4,7 @@ export function buildRewritePrompt(input: {
   draft: unknown;
   platform: "blog" | "sns" | "store";
   requiredContent?: string[];
+  photoGuides?: { placeholder: string; notes?: string }[];
   mustInclude?: string[];
   bannedWords?: string[];
   styleProfile?: Record<string, unknown> | null;
@@ -20,6 +21,8 @@ Context:
 - Platform: ${input.platform}
 - Must include (verbatim): ${input.mustInclude?.join("\n") ?? "(none)"}
 - Required content notes (rewrite into style): ${input.requiredContent?.join("\n") ?? "(none)"}
+- Photo placeholders (must appear verbatim) and notes (blend nearby):
+${input.photoGuides?.map((p) => `- ${p.placeholder}${p.notes ? ` :: ${p.notes}` : ""}`).join("\n") ?? "(none)"}
 - Banned words (must not appear): ${input.bannedWords?.join(" | ") ?? "(none)"}
 - Style profile: ${JSON.stringify(input.styleProfile ?? {})}
 

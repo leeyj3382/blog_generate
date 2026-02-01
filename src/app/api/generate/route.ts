@@ -252,6 +252,7 @@ export async function POST(request: Request) {
       draft,
       platform: input.platform,
       requiredContent: input.requiredContent,
+      photoGuides: input.photoGuides,
       mustInclude: input.mustInclude,
       bannedWords: input.bannedWords,
       styleProfile,
@@ -286,6 +287,18 @@ export async function POST(request: Request) {
     };
 
     ensureIncludes();
+
+    const photoGuides = input.photoGuides ?? [];
+    const placeholders = photoGuides.map((p) => p.placeholder).filter(Boolean);
+    const bodyText = typeof output["body"] === "string" ? output["body"] : "";
+    if (placeholders.length && bodyText) {
+      const missing = placeholders.filter(
+        (ph) => !bodyText.includes(ph),
+      );
+      if (missing.length) {
+        output["body"] = `${bodyText}\n${missing.join("\n")}`.trim();
+      }
+    }
     const titleCandidate = (() => {
       const titles = output["titleCandidates"];
       if (!Array.isArray(titles) || titles.length === 0) return null;
