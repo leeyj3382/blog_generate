@@ -22,7 +22,17 @@ export const generateSchema = z.object({
   keywords: z.array(z.string()).min(3).max(10),
   length: lengthSchema,
   references: z.array(z.string()).optional(),
-  referenceUrls: z.array(z.string().url()).optional(),
+  referenceUrls: z
+    .array(
+      z.preprocess((value) => {
+        if (typeof value !== "string") return value;
+        const trimmed = value.trim();
+        if (!trimmed) return trimmed;
+        if (/^https?:\/\//i.test(trimmed)) return trimmed;
+        return `https://${trimmed}`;
+      }, z.string().url()),
+    )
+    .optional(),
   useReferenceStyle: z.boolean().optional(),
   extraPrompt: z.string().max(600).optional(),
   photoGuides: z

@@ -175,3 +175,20 @@ body {
 .fade-loop {
   animation: fadeCycle 14s ease-in-out forwards; /* JS로 루프 제어하므로 infinite 아님 */
 }
+
+.animate-pencil {
+  transform-origin: 65% 85%;
+  animation: pencilWrite 1.2s ease-in-out infinite;
+}
+
+@keyframes pencilWrite {
+  0% {
+    transform: translate(-50%, -50%) rotate(-10deg) translateX(0px);
+  }
+  50% {
+    transform: translate(-50%, -56%) rotate(8deg) translateX(3px);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(-10deg) translateX(0px);
+  }
+}

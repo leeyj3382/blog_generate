@@ -14,6 +14,11 @@ function nowMs() {
   return Date.now();
 }
 
+function isNaverUrl(url: string) {
+  const lower = url.toLowerCase();
+  return lower.includes("blog.naver.com") || lower.includes("m.blog.naver.com");
+}
+
 async function fetchReferenceText(url: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
@@ -119,6 +124,22 @@ async function fetchReferenceTextWithPlaywright(url: string) {
   }
 }
 
+async function fetchReferenceWithFallback(url: string) {
+  const crawler = await fetchReferenceTextWithCrawler(url);
+  if (crawler) return { text: crawler, source: "crawler" as const };
+
+  if (!isNaverUrl(url)) {
+    const plain = await fetchReferenceText(url);
+    if (plain) return { text: plain, source: "html" as const };
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    const pw = await fetchReferenceTextWithPlaywright(url);
+    if (pw) return { text: pw, source: "playwright" as const };
+  }
+  return { text: null, source: "none" as const };
+}
+
 export async function POST(request: Request) {
   const auth = await requireAuth(request);
   if (!auth.ok) {
@@ -142,7 +163,13 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     input = generateSchema.parse(body);
-  } catch {
+  } catch (error) {
+    if (error && typeof error === "object" && "issues" in error) {
+      return NextResponse.json(
+        { error: "Invalid input", issues: (error as { issues: unknown }).issues },
+        { status: 400 },
+      );
+    }
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
@@ -206,6 +233,12 @@ export async function POST(request: Request) {
   const referenceTexts: string[] = [];
   const referenceUrls = input.referenceUrls ?? [];
   let fetchedReferenceCount = 0;
+  const referenceSources: Array<{ url: string; source: string }> = [];
+  const debugEnabled =
+    process.env.DEBUG_REFERENCE_SAMPLE === "1" ||
+    process.env.NODE_ENV !== "production";
+  let referenceSample: string | null = null;
+  const crawlerUrl = process.env.CRAWLER_URL ?? null;
 
   let stage = "init";
   try {
@@ -213,18 +246,27 @@ export async function POST(request: Request) {
     if (referenceUrls.length) {
       const fetched = await Promise.all(
         referenceUrls.map(async (url) => {
-          const plain = await fetchReferenceText(url);
-          if (plain) return plain;
-          const crawler = await fetchReferenceTextWithCrawler(url);
-          if (crawler) return crawler;
-          if (process.env.NODE_ENV !== "production") {
-            return fetchReferenceTextWithPlaywright(url);
-          }
-          return null;
+          const result = await fetchReferenceWithFallback(url);
+          referenceSources.push({ url, source: result.source });
+          return result.text;
         }),
       );
       fetched.filter(Boolean).forEach((text) => referenceTexts.push(text!));
       fetchedReferenceCount = fetched.filter(Boolean).length;
+    }
+    if (debugEnabled && referenceTexts.length) {
+      referenceSample = referenceTexts[0].slice(0, 600);
+      console.log(
+        `[debug] referenceSample len=${referenceSample.length} urlCount=${referenceUrls.length} crawlerUrl=${crawlerUrl}`,
+      );
+      console.log(`[debug] referenceSample: ${referenceSample}`);
+      if (referenceSources.length) {
+        console.log(
+          `[debug] referenceSources: ${referenceSources
+            .map((r) => `${r.source}:${r.url}`)
+            .join(", ")}`,
+        );
+      }
     }
 
     if (referenceTexts.length && input.useReferenceStyle !== false) {
@@ -292,11 +334,47 @@ export async function POST(request: Request) {
     const placeholders = photoGuides.map((p) => p.placeholder).filter(Boolean);
     const bodyText = typeof output["body"] === "string" ? output["body"] : "";
     if (placeholders.length && bodyText) {
-      const missing = placeholders.filter(
-        (ph) => !bodyText.includes(ph),
-      );
+      const missing = placeholders.filter((ph) => !bodyText.includes(ph));
       if (missing.length) {
         output["body"] = `${bodyText}\n${missing.join("\n")}`.trim();
+      }
+    }
+
+    if (photoGuides.length && bodyText) {
+      const currentBody =
+        typeof output["body"] === "string" ? output["body"] : bodyText;
+      const newlineBody = placeholders.reduce((text, ph) => {
+        const safe = ph.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`${safe}(\\s*)`, "g");
+        return text.replace(regex, `${ph}\n`);
+      }, currentBody);
+      output["body"] = newlineBody;
+
+      const notes = photoGuides
+        .map((p) => p.notes)
+        .filter((n): n is string => Boolean(n));
+      if (notes.length) {
+        const lowerBody = bodyText.toLowerCase();
+        const leaked = notes.some((note) =>
+          lowerBody.includes(note.toLowerCase()),
+        );
+        if (leaked) {
+          const rewritePrompt = buildRewritePrompt({
+            draft: output,
+            platform: input.platform,
+            requiredContent: input.requiredContent,
+            photoGuides: input.photoGuides,
+            mustInclude: input.mustInclude,
+            bannedWords: input.bannedWords,
+            styleProfile,
+          });
+          const rewritten = await createJsonCompletion({
+            ...rewritePrompt,
+            model: "gpt-5-mini",
+          });
+          const rewrittenOutput = rewritten as Record<string, unknown>;
+          output["body"] = rewrittenOutput["body"];
+        }
       }
     }
     const titleCandidate = (() => {
@@ -361,6 +439,14 @@ export async function POST(request: Request) {
         fetchedCount: fetchedReferenceCount,
         textCount: referenceTexts.length,
       },
+      debug: debugEnabled
+        ? {
+            referenceSample,
+            referenceUrls,
+            crawlerUrl,
+            referenceSources,
+          }
+        : undefined,
       meta: {
         platform: input.platform,
         purpose: input.purpose,

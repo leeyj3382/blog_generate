@@ -70,7 +70,8 @@ Writing rules:
 - Keywords must be woven naturally into sentences.
 - All "Must include" phrases must appear verbatim and naturally.
 - "Required content notes" must be rewritten into the target style and incorporated naturally.
-- Insert each photo placeholder text verbatim in the body and weave the related notes into nearby sentences.
+- Insert each photo placeholder text verbatim in the body.
+- Never copy photo notes verbatim; paraphrase them into natural sentences matching the style profile and place them near the placeholder.
 - Distribute multiple placeholders across the flow; do not cluster them at the end.
 - Avoid mechanical or list-like insertion of keywords.
 

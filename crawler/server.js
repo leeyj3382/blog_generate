@@ -16,6 +16,123 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function cleanNaverText(text) {
+  if (!text) return "";
+
+  const globalDrop = [
+    /본문\s*바로가기/g,
+    /블로그\s*카테고리\s*이동/g,
+    /\bMY\s*메뉴\b/g,
+    /공유하기|URL복사|신고하기/g,
+    /Previous image|Next image/g,
+    /본문\s*폰트\s*크기\s*조정/g,
+    /본문\s*폰트\s*크기\s*작게\s*보기/g,
+    /본문\s*폰트\s*크기\s*크게\s*보기/g,
+  ];
+
+  let cleaned = text;
+  globalDrop.forEach((re) => {
+    cleaned = cleaned.replace(re, " ");
+  });
+  cleaned = cleaned.replace(/var\s+\w+[^;]*;/g, " ");
+  cleaned = cleaned.replace(/window\.\w+[^;]*;/g, " ");
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
+
+  const lines = text
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const dropPatterns = [
+    /본문\s*바로가기/i,
+    /카테고리\s*이동/i,
+    /\bMY\s*메뉴\b/i,
+    /공유하기|URL복사|신고하기/i,
+    /댓글\s*\d+|공감\s*\d+/i,
+    /Previous image|Next image/i,
+    /블로그\s*검색|이\s*블로그에서\s*검색/i,
+    /폰트\s*크기/i,
+    /이웃추가/i,
+  ];
+
+  const filtered = lines.filter((l) => {
+    if (l.length <= 2) return false;
+    if (dropPatterns.some((re) => re.test(l))) return false;
+    if (/var\s+\w+|function\s*\(|window\.\w+|document\.\w+/.test(l)) return false;
+    return true;
+  });
+
+  const lineCleaned = filtered.join(" ").replace(/\s+/g, " ").trim();
+  return lineCleaned.length >= cleaned.length ? lineCleaned : cleaned;
+}
+
+async function extractNaverBlogText(page) {
+  const mainFrame = page.frame({ name: "mainFrame" });
+  await sleep(900);
+
+  const waitSel = ".se-main-container, #postViewArea, .post_view, article";
+  if (mainFrame) {
+    await mainFrame.waitForSelector(waitSel, { timeout: 5000 }).catch(() => {});
+  } else {
+    await page.waitForSelector(waitSel, { timeout: 5000 }).catch(() => {});
+  }
+
+  const framesToTry = [];
+  if (mainFrame) framesToTry.push(mainFrame);
+
+  for (const f of page.frames()) {
+    const u = (f.url() || "").toLowerCase();
+    if (u.includes("postview.naver") || u.includes("m.blog.naver.com")) {
+      framesToTry.push(f);
+    }
+  }
+  if (framesToTry.length === 0) framesToTry.push(page);
+
+  const selectors = [
+    ".se-main-container",
+    "#postViewArea",
+    ".post_view",
+    "article",
+  ];
+
+  let bestRaw = "";
+  for (const f of framesToTry) {
+    for (const sel of selectors) {
+      try {
+        const txt = await f.evaluate((selector) => {
+          const el = document.querySelector(selector);
+          if (!el) return "";
+          const t = (el.textContent || "").replace(/\s+/g, " ").trim();
+          return t;
+        }, sel);
+        if (txt && txt.length > bestRaw.length) bestRaw = txt;
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  if (!bestRaw || bestRaw.length < 200) {
+    try {
+      const fb = await (mainFrame || page).evaluate(() => {
+        const candidates = Array.from(document.querySelectorAll("div, section, article"));
+        let best = "";
+        for (const el of candidates) {
+          if (el.closest("header, nav, footer, aside")) continue;
+          const t = (el.textContent || "").replace(/\s+/g, " ").trim();
+          if (t.length > best.length) best = t;
+        }
+        return best;
+      });
+      if (fb && fb.length > bestRaw.length) bestRaw = fb;
+    } catch {
+      // ignore
+    }
+  }
+
+  return cleanNaverText(bestRaw);
+}
+
 async function acquireSlot() {
   while (active >= MAX_CONCURRENT) {
     await new Promise((resolve) => waiters.push(resolve));
@@ -86,22 +203,34 @@ app.post("/extract", requireKey, async (req, res) => {
       p.evaluate(() => {
         const article = document.querySelector("article");
         const main = document.querySelector("main");
-        const body = document.body;
-        const text =
-          article?.textContent || main?.textContent || body?.textContent || "";
-        return text.replace(/\s+/g, " ").trim();
+        const pick = article || main;
+        if (pick) return (pick.textContent || "").replace(/\s+/g, " ").trim();
+
+        const candidates = Array.from(document.querySelectorAll("div, section, article"));
+        let best = "";
+        for (const el of candidates) {
+          if (el.closest("header, nav, footer, aside")) continue;
+          const t = (el.textContent || "").replace(/\s+/g, " ").trim();
+          if (t.length > best.length) best = t;
+        }
+        return best.trim();
       });
 
-    let best = await extractText(page);
-    for (const frame of page.frames()) {
-      try {
-        const text = await extractText(frame);
-        if (text.length > best.length) best = text;
-      } catch {
-        // ignore frame errors
+    const urlLower = url.toLowerCase();
+    let best = "";
+    if (urlLower.includes("blog.naver.com") || urlLower.includes("m.blog.naver.com")) {
+      best = await extractNaverBlogText(page);
+    } else {
+      best = await extractText(page);
+      for (const frame of page.frames()) {
+        try {
+          const text = await extractText(frame);
+          if (text.length > best.length) best = text;
+        } catch {
+          // ignore
+        }
       }
     }
-
     await page.close();
     await context.close();
 
@@ -109,6 +238,8 @@ app.post("/extract", requireKey, async (req, res) => {
       return res.status(422).json({ error: "Content too short" });
     }
 
+    const sample = best.slice(0, 600);
+    console.log(`[extract] url=${url} len=${best.length} sample="${sample}"`);
     return res.json({ text: best });
   } catch (err) {
     return res.status(500).json({ error: err?.message || "Extract failed" });

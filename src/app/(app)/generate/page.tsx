@@ -63,6 +63,21 @@ export default function GeneratePage() {
         router.push("/login");
         return;
       }
+      const normalizeUrl = (raw: string) => {
+        const trimmed = raw.trim();
+        if (!trimmed) return null;
+        const withScheme = /^https?:\/\//i.test(trimmed)
+          ? trimmed
+          : `https://${trimmed}`;
+        try {
+          // eslint-disable-next-line no-new
+          new URL(withScheme);
+          return withScheme;
+        } catch {
+          return null;
+        }
+      };
+
       const payload = {
         platform,
         purpose,
@@ -74,8 +89,8 @@ export default function GeneratePage() {
         length,
         referenceUrls: referenceUrls
           .split("\n")
-          .map((r) => r.trim())
-          .filter(Boolean),
+          .map(normalizeUrl)
+          .filter((url): url is string => Boolean(url)),
         useReferenceStyle,
         extraPrompt: extraPrompt || undefined,
         requiredContent: requiredPhrases
@@ -108,10 +123,18 @@ export default function GeneratePage() {
       });
 
       if (!res.ok) {
-        throw new Error("생성 실패");
+        const body = await res.json().catch(() => ({}));
+        const detail = body.issues
+          ? JSON.stringify(body.issues)
+          : (body.error ?? "생성 실패");
+        throw new Error(detail);
       }
 
       const data = await res.json();
+      if (data?.debug?.referenceSample) {
+        console.log("[reference sample]", data.debug.referenceSample);
+        console.log("[reference urls]", data.debug.referenceUrls);
+      }
       setProgress(100);
       router.push(`/result/${data.generationId}`);
     } catch (err) {
@@ -122,22 +145,43 @@ export default function GeneratePage() {
   };
 
   useEffect(() => {
-    // ... (기존 로직 동일)
     if (!loading) return;
-    let value = 10;
-    const timer = setInterval(() => {
-      value = value < 50 ? value + 6 : value < 85 ? value + 2 : value + 0.4;
-      if (value >= 95) value = 95;
+    let value = 0;
+    let timer: NodeJS.Timeout | null = null;
+
+    const tick = () => {
+      let step = 2;
+      let delay = 500;
+
+      if (value < 35) {
+        step = 2 + Math.random(); // 2~3%
+        delay = 500 + Math.random() * 300; // 300~600ms
+      } else if (value < 80) {
+        step = 3 + Math.random() * 3; // 3~6%
+        delay = 550 + Math.random() * 250;
+      } else {
+        step = 1 + Math.random(); // 1~2%
+        delay = 550 + Math.random() * 350;
+      }
+
+      value = Math.min(95, value + step);
       setProgress(Math.round(value));
+
       if (value < 35) {
         setPhase("스타일 분석 중");
-      } else if (value < 70) {
+      } else if (value < 80) {
         setPhase("초안 생성 중");
       } else {
         setPhase("검수 리라이트 중");
       }
-    }, 600);
-    return () => clearInterval(timer);
+
+      timer = setTimeout(tick, delay);
+    };
+
+    tick();
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [loading]);
 
   return (
@@ -241,7 +285,7 @@ export default function GeneratePage() {
             <div className="grid md:grid-cols-2 gap-4">
               <textarea
                 className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] p-4 rounded-xl focus:ring-2 focus:ring-[color:var(--accent)] outline-none transition-all min-h-[150px] resize-none"
-                placeholder="또는 레퍼런스 URL을 입력해주세요. (엔터(Enter)로 구분)"
+                placeholder="레퍼런스 URL 입력 (줄바꿈, https:// 자동 보정)"
                 value={referenceUrls}
                 onChange={(e) => setReferenceUrls(e.target.value)}
               />
@@ -288,7 +332,10 @@ export default function GeneratePage() {
                     value={row.placeholder}
                     onChange={(e) => {
                       const next = [...photoGuides];
-                      next[index] = { ...next[index], placeholder: e.target.value };
+                      next[index] = {
+                        ...next[index],
+                        placeholder: e.target.value,
+                      };
                       setPhotoGuides(next);
                     }}
                   />
@@ -307,7 +354,9 @@ export default function GeneratePage() {
                     className="btn-outline px-3 py-2 text-sm"
                     onClick={() => {
                       const next = photoGuides.filter((_, i) => i !== index);
-                      setPhotoGuides(next.length ? next : [{ placeholder: "", notes: "" }]);
+                      setPhotoGuides(
+                        next.length ? next : [{ placeholder: "", notes: "" }],
+                      );
                     }}
                   >
                     삭제
@@ -318,7 +367,10 @@ export default function GeneratePage() {
                 type="button"
                 className="btn-outline w-fit"
                 onClick={() =>
-                  setPhotoGuides([...photoGuides, { placeholder: "", notes: "" }])
+                  setPhotoGuides([
+                    ...photoGuides,
+                    { placeholder: "", notes: "" },
+                  ])
                 }
               >
                 + 추가
@@ -377,9 +429,17 @@ export default function GeneratePage() {
       {loading && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100]">
           <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-3xl p-8 w-[360px] text-center space-y-6 shadow-2xl">
-            <div className="relative w-16 h-16 mx-auto">
-              <div className="absolute inset-0 border-4 border-[color:var(--surface-2)] rounded-full"></div>
-              <div className="absolute inset-0 border-4 border-[color:var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+            <div className="relative w-28 h-20 mx-auto">
+              <img
+                src="/note.png"
+                alt="note"
+                className="absolute inset-0 w-full h-full object-contain opacity-60 -rotate-6 -translate-x-2"
+              />
+              <img
+                src="/pencil.png"
+                alt="pencil"
+                className="absolute left-1/2 top-1/2 w-16 h-16 -translate-x-1/2 -translate-y-1/2 translate-x-1.5 translate-y-2 animate-pencil"
+              />
             </div>
             <div className="space-y-2">
               <p className="text-lg font-semibold animate-pulse">{phase}</p>

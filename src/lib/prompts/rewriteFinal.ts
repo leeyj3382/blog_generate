@@ -60,6 +60,9 @@ Draft JSON:
 ${JSON.stringify(input.draft)}
 
 Return final JSON using the exact same schema as the draft.
+
+Additional rules:
+- Never copy photo notes verbatim; paraphrase them into the target style and keep them near the placeholder.
 `,
   };
 }
