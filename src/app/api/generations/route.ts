@@ -57,3 +57,27 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ items, nextCursor });
 }
+
+export async function DELETE(request: Request) {
+  const auth = await requireAuth(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: 401 });
+  }
+
+  const adminDb = getAdminDb();
+  const uid = auth.decoded.uid;
+  const generationsRef = adminDb.collection("generations").where("uid", "==", uid);
+  const userGenRef = adminDb.collection("users").doc(uid).collection("generations");
+
+  const batch = adminDb.batch();
+  const [genSnap, userSnap] = await Promise.all([
+    generationsRef.get(),
+    userGenRef.get(),
+  ]);
+
+  genSnap.docs.forEach((doc) => batch.delete(doc.ref));
+  userSnap.docs.forEach((doc) => batch.delete(doc.ref));
+
+  await batch.commit();
+  return NextResponse.json({ ok: true, deleted: genSnap.size + userSnap.size });
+}
